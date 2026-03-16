@@ -54,5 +54,5 @@ def api_data():
     data = [dict(row) for row in reversed(rows)]
     return jsonify(data)
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080, debug=True)
+#if __name__ == "__main__":
+ #   app.run(host='0.0.0.0', port=8080, debug=True)
