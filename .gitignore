@@ -1,6 +1,12 @@
-
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+# Ignore virtual environments
+env/
+venv/
+
+# Python cache
 __pycache__/
+*.pyc
