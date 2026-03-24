@@ -2,7 +2,7 @@ import requests
 import time
 from sensors.sensor_sim import generate_sensor_data
 
-CLOUD_ENDPOINT = "http://127.0.0.1:8080/upload"  # Cloud9 Flask backend
+CLOUD_ENDPOINT = "http://fog-env.eba-9uvt5trc.us-east-1.elasticbeanstalk.com/upload"
 
 def fog_node_process(sensor_data):
     processed = {}
