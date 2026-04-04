@@ -1,111 +1,778 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aircraft Engine Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-<title>Aircraft Engine Monitoring</title>
+        body{
+            background: linear-gradient(135deg, #020617, #081229, #020617);
+            color:#e2e8f0;
+            min-height:100vh;
+            padding:20px;
+        }
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+        .dashboard{
+            max-width: 1450px;
+            margin: auto;
+        }
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        .topbar{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:20px;
+            flex-wrap:wrap;
+            gap:15px;
+        }
 
-<script src="https://cdn.jsdelivr.net/npm/raphael/raphael.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/justgage"></script>
+        .title h1{
+            font-size:30px;
+            font-weight:700;
+            color:#ffffff;
+            letter-spacing:0.5px;
+        }
 
-<style>
+        .title p{
+            color:#94a3b8;
+            margin-top:5px;
+            font-size:14px;
+        }
 
-body{
-background:#f4f6f9;
-font-family:Segoe UI;
-}
+        .status-box{
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+        }
 
-.navbar{
-background:#1f4e79;
-}
+        .pill{
+            background: rgba(15, 23, 42, 0.9);
+            border:1px solid rgba(56, 189, 248, 0.25);
+            padding:10px 16px;
+            border-radius:999px;
+            font-size:13px;
+            color:#cbd5e1;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.08);
+        }
 
-.card{
-border:none;
-border-radius:12px;
-box-shadow:0 4px 10px rgba(0,0,0,0.08);
-}
+        .grid{
+            display:grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap:18px;
+        }
 
-.chart-card{
-height:260px;
-}
+        .card{
+            background: rgba(6, 16, 38, 0.95);
+            border:1px solid rgba(59, 130, 246, 0.15);
+            border-radius:22px;
+            padding:18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            position:relative;
+            overflow:hidden;
+        }
 
-.gauge{
-height:200px;
-}
+        .card::before{
+            content:"";
+            position:absolute;
+            top:0;
+            left:0;
+            width:100%;
+            height:2px;
+            background: linear-gradient(90deg, #06b6d4, #f43f5e, #facc15, #22c55e);
+            opacity:0.8;
+        }
 
-</style>
+        .card h3{
+            font-size:15px;
+            color:#cbd5e1;
+            margin-bottom:12px;
+            font-weight:600;
+        }
 
+        .metric-card{
+            grid-column: span 2;
+            min-height:120px;
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
+        }
+
+        .metric-label{
+            font-size:13px;
+            color:#94a3b8;
+            text-transform:uppercase;
+            letter-spacing:1px;
+        }
+
+        .metric-value{
+            font-size:30px;
+            font-weight:700;
+            margin-top:8px;
+            color:#ffffff;
+        }
+
+        .metric-unit{
+            font-size:13px;
+            color:#38bdf8;
+            margin-left:6px;
+        }
+
+        .metric-footer{
+            font-size:12px;
+            color:#64748b;
+        }
+
+        .chart-large{
+            grid-column: span 8;
+            min-height:340px;
+        }
+
+        .alerts{
+            grid-column: span 4;
+            min-height:340px;
+        }
+
+        .gauge-card{
+            grid-column: span 3;
+            min-height:300px;
+        }
+
+        .radar-card{
+            grid-column: span 3;
+            min-height:300px;
+        }
+
+        .bar-card{
+            grid-column: span 6;
+            min-height:300px;
+        }
+
+        .alert-item{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:14px 16px;
+            border-radius:16px;
+            margin-bottom:12px;
+            background: rgba(15, 23, 42, 0.95);
+            border:1px solid rgba(255,255,255,0.05);
+        }
+
+        .alert-left{
+            display:flex;
+            flex-direction:column;
+            gap:4px;
+        }
+
+        .alert-title{
+            font-size:14px;
+            font-weight:600;
+            color:#f8fafc;
+        }
+
+        .alert-sub{
+            font-size:12px;
+            color:#94a3b8;
+        }
+
+        .badge{
+            padding:7px 12px;
+            border-radius:999px;
+            font-size:12px;
+            font-weight:700;
+        }
+
+        .ok{
+            background: rgba(34, 197, 94, 0.15);
+            color:#22c55e;
+            border:1px solid rgba(34, 197, 94, 0.25);
+        }
+
+        .warn{
+            background: rgba(250, 204, 21, 0.15);
+            color:#facc15;
+            border:1px solid rgba(250, 204, 21, 0.25);
+        }
+
+        .danger{
+            background: rgba(244, 63, 94, 0.15);
+            color:#f43f5e;
+            border:1px solid rgba(244, 63, 94, 0.25);
+        }
+
+        .progress-wrap{
+            margin-top:18px;
+        }
+
+        .progress-row{
+            margin-bottom:16px;
+        }
+
+        .progress-head{
+            display:flex;
+            justify-content:space-between;
+            margin-bottom:8px;
+            font-size:13px;
+            color:#cbd5e1;
+        }
+
+        .progress{
+            width:100%;
+            height:12px;
+            background:#0f172a;
+            border-radius:999px;
+            overflow:hidden;
+        }
+
+        .progress-bar{
+            height:100%;
+            border-radius:999px;
+        }
+
+        .cyan{ background: linear-gradient(90deg, #06b6d4, #67e8f9); }
+        .pink{ background: linear-gradient(90deg, #f43f5e, #fb7185); }
+        .yellow{ background: linear-gradient(90deg, #f59e0b, #facc15); }
+        .green{ background: linear-gradient(90deg, #22c55e, #4ade80); }
+
+        .chart-box{
+            height:240px;
+        }
+
+        .small-chart-box{
+            height:210px;
+        }
+
+        .footer-note{
+            margin-top:18px;
+            text-align:center;
+            color:#64748b;
+            font-size:12px;
+        }
+
+        @media (max-width: 1200px){
+            .metric-card,
+            .gauge-card,
+            .radar-card{
+                grid-column: span 6;
+            }
+
+            .chart-large,
+            .alerts,
+            .bar-card{
+                grid-column: span 12;
+            }
+        }
+
+        @media (max-width: 768px){
+            .metric-card,
+            .gauge-card,
+            .radar-card,
+            .chart-large,
+            .alerts,
+            .bar-card{
+                grid-column: span 12;
+            }
+
+            .title h1{
+                font-size:24px;
+            }
+        }
+    </style>
 </head>
-
 <body>
+    <div class="dashboard">
+        <div class="topbar">
+            <div class="title">
+                <h1>Aircraft Engine Monitoring Dashboard</h1>
+                <p>Real-time fog node analytics for predictive maintenance</p>
+            </div>
 
-<nav class="navbar navbar-dark px-4">
-<span class="navbar-brand">Aircraft Engine Monitoring</span>
-</nav>
+            <div class="status-box">
+                <div class="pill">Engine ID: ENG-204</div>
+                <div class="pill">Data Source: Fog Node</div>
+                <div class="pill" id="lastUpdated">Updated: --</div>
+            </div>
+        </div>
 
-<div class="container mt-4">
+        <div class="grid">
+            <!-- Top metrics -->
+            <div class="card metric-card">
+                <div>
+                    <div class="metric-label">Temperature</div>
+                    <div class="metric-value" id="temperatureValue">0<span class="metric-unit">°C</span></div>
+                </div>
+                <div class="metric-footer">Safe below 850°C</div>
+            </div>
 
-<div class="row g-3">
+            <div class="card metric-card">
+                <div>
+                    <div class="metric-label">Vibration</div>
+                    <div class="metric-value" id="vibrationValue">0<span class="metric-unit">mm/s</span></div>
+                </div>
+                <div class="metric-footer">Alert if above 4</div>
+            </div>
 
+            <div class="card metric-card">
+                <div>
+                    <div class="metric-label">RPM</div>
+                    <div class="metric-value" id="rpmValue">0<span class="metric-unit">rpm</span></div>
+                </div>
+                <div class="metric-footer">Used for engine load</div>
+            </div>
 
-<!-- Temperature Chart -->
+            <div class="card metric-card">
+                <div>
+                    <div class="metric-label">Fuel Flow</div>
+                    <div class="metric-value" id="fuelFlowValue">0<span class="metric-unit">kg/h</span></div>
+                </div>
+                <div class="metric-footer">Fuel usage indicator</div>
+            </div>
 
-<div class="col-md-6">
-<div class="card chart-card p-3">
-<h6>Engine Temperature</h6>
-<canvas id="temperatureChart"></canvas>
-</div>
-</div>
+            <div class="card metric-card">
+                <div>
+                    <div class="metric-label">Pressure</div>
+                    <div class="metric-value" id="pressureValue">0<span class="metric-unit">psi</span></div>
+                </div>
+                <div class="metric-footer">Engine pressure health</div>
+            </div>
 
-<!-- RPM Chart -->
+            <div class="card metric-card">
+                <div>
+                    <div class="metric-label">Engine Load</div>
+                    <div class="metric-value" id="engineLoadValue">0<span class="metric-unit">%</span></div>
+                </div>
+                <div class="metric-footer">Calculated from RPM / 15000</div>
+            </div>
 
-<div class="col-md-6">
-<div class="card chart-card p-3">
-<h6>Engine RPM</h6>
-<canvas id="rpmChart"></canvas>
-</div>
-</div>
+            <!-- Main line chart -->
+            <div class="card chart-large">
+                <h3>Live Sensor Trends</h3>
+                <div class="chart-box">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
 
-<!-- Gauges -->
+            <!-- Alerts -->
+            <div class="card alerts">
+                <h3>Engine Status & Alerts</h3>
 
-<div class="col-md-6">
-<div class="card p-3 text-center">
-<h6>Engine Load</h6>
-<div id="loadGauge" class="gauge"></div>
-</div>
-</div>
+                <div class="alert-item">
+                    <div class="alert-left">
+                        <div class="alert-title">Vibration Alert</div>
+                        <div class="alert-sub">Triggered when vibration &gt; 4</div>
+                    </div>
+                    <div class="badge ok" id="vibrationAlertBadge">NORMAL</div>
+                </div>
 
-<div class="col-md-6">
-<div class="card p-3 text-center">
-<h6>Vibration Level</h6>
-<div id="vibrationGauge" class="gauge"></div>
-</div>
-</div>
+                <div class="alert-item">
+                    <div class="alert-left">
+                        <div class="alert-title">Failure Warning</div>
+                        <div class="alert-sub">Triggered when temperature &gt; 850 or vibration alert</div>
+                    </div>
+                    <div class="badge ok" id="failureWarningBadge">SAFE</div>
+                </div>
 
-<!-- Bar Charts -->
+                <div class="alert-item">
+                    <div class="alert-left">
+                        <div class="alert-title">Overall Health</div>
+                        <div class="alert-sub">Combined engine condition</div>
+                    </div>
+                    <div class="badge warn" id="overallHealthBadge">MONITOR</div>
+                </div>
 
-<div class="col-md-6">
-<div class="card p-3">
-<h6>Fuel Flow</h6>
-<canvas id="fuelChart"></canvas>
-</div>
-</div>
+                <div class="progress-wrap">
+                    <div class="progress-row">
+                        <div class="progress-head">
+                            <span>Temperature Usage</span>
+                            <span id="tempProgressText">0%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar pink" id="tempProgressBar" style="width:0%"></div>
+                        </div>
+                    </div>
 
-<div class="col-md-6">
-<div class="card p-3">
-<h6>Pressure</h6>
-<canvas id="pressureChart"></canvas>
-</div>
-</div>
+                    <div class="progress-row">
+                        <div class="progress-head">
+                            <span>Vibration Level</span>
+                            <span id="vibProgressText">0%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar yellow" id="vibProgressBar" style="width:0%"></div>
+                        </div>
+                    </div>
 
-</div>
+                    <div class="progress-row">
+                        <div class="progress-head">
+                            <span>Engine Load</span>
+                            <span id="loadProgressText">0%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar cyan" id="loadProgressBar" style="width:0%"></div>
+                        </div>
+                    </div>
 
-</div>
+                    <div class="progress-row">
+                        <div class="progress-head">
+                            <span>Fuel Efficiency Indicator</span>
+                            <span id="fuelProgressText">0%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar green" id="fuelProgressBar" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+            <!-- Doughnut / gauge -->
+            <div class="card gauge-card">
+                <h3>Engine Load Gauge</h3>
+                <div class="small-chart-box">
+                    <canvas id="engineLoadChart"></canvas>
+                </div>
+            </div>
 
+            <div class="card gauge-card">
+                <h3>Temperature vs Safe Limit</h3>
+                <div class="small-chart-box">
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Radar -->
+            <div class="card radar-card">
+                <h3>Current Sensor Shape</h3>
+                <div class="small-chart-box">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bar chart -->
+            <div class="card bar-card">
+                <h3>Latest Sensor Snapshot</h3>
+                <div class="chart-box">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            Aircraft predictive maintenance dashboard powered by Flask + Fog Node + Chart.js
+        </div>
+    </div>
+
+    <script>
+        // Demo starting values
+        let sensorHistoryLabels = ["1","2","3","4","5","6","7","8","9","10"];
+        let temperatureHistory = [720, 735, 741, 755, 748, 760, 772, 780, 795, 810];
+        let vibrationHistory = [2.1, 2.4, 2.6, 2.8, 3.0, 3.2, 3.5, 3.6, 3.8, 4.1];
+        let rpmHistory = [10000, 10400, 10800, 11000, 11300, 11500, 11800, 12000, 12300, 12600];
+
+        const trendChart = new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: sensorHistoryLabels,
+                datasets: [
+                    {
+                        label: 'Temperature',
+                        data: temperatureHistory,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'Vibration',
+                        data: vibrationHistory,
+                        borderColor: '#f43f5e',
+                        backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'RPM',
+                        data: rpmHistory,
+                        borderColor: '#facc15',
+                        backgroundColor: 'rgba(250, 204, 21, 0.12)',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 3,
+                        hidden: true
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio:false,
+                responsive:true,
+                plugins:{
+                    legend:{
+                        labels:{ color:'#cbd5e1' }
+                    }
+                },
+                scales:{
+                    x:{
+                        ticks:{ color:'#94a3b8' },
+                        grid:{ color:'rgba(148,163,184,0.08)' }
+                    },
+                    y:{
+                        ticks:{ color:'#94a3b8' },
+                        grid:{ color:'rgba(148,163,184,0.08)' }
+                    }
+                }
+            }
+        });
+
+        const engineLoadChart = new Chart(document.getElementById('engineLoadChart'), {
+            type:'doughnut',
+            data:{
+                labels:['Load','Remaining'],
+                datasets:[{
+                    data:[0,100],
+                    backgroundColor:['#06b6d4','#0f172a'],
+                    borderWidth:0,
+                    cutout:'72%'
+                }]
+            },
+            options:{
+                maintainAspectRatio:false,
+                plugins:{
+                    legend:{ display:false }
+                }
+            }
+        });
+
+        const temperatureChart = new Chart(document.getElementById('temperatureChart'), {
+            type:'doughnut',
+            data:{
+                labels:['Used','Safe Margin'],
+                datasets:[{
+                    data:[0,100],
+                    backgroundColor:['#f43f5e','#0f172a'],
+                    borderWidth:0,
+                    cutout:'72%'
+                }]
+            },
+            options:{
+                maintainAspectRatio:false,
+                plugins:{
+                    legend:{ display:false }
+                }
+            }
+        });
+
+        const radarChart = new Chart(document.getElementById('radarChart'), {
+            type:'radar',
+            data:{
+                labels:['Temp','Vibration','RPM','Fuel','Pressure'],
+                datasets:[{
+                    label:'Engine',
+                    data:[70, 50, 80, 65, 60],
+                    borderColor:'#38bdf8',
+                    backgroundColor:'rgba(56,189,248,0.18)',
+                    borderWidth:2
+                }]
+            },
+            options:{
+                maintainAspectRatio:false,
+                plugins:{
+                    legend:{
+                        labels:{ color:'#cbd5e1' }
+                    }
+                },
+                scales:{
+                    r:{
+                        angleLines:{ color:'rgba(148,163,184,0.15)' },
+                        grid:{ color:'rgba(148,163,184,0.15)' },
+                        pointLabels:{ color:'#cbd5e1' },
+                        ticks:{
+                            color:'#94a3b8',
+                            backdropColor:'transparent'
+                        }
+                    }
+                }
+            }
+        });
+
+        const barChart = new Chart(document.getElementById('barChart'), {
+            type:'bar',
+            data:{
+                labels:['Temperature','Vibration','RPM','Fuel Flow','Pressure','Engine Load'],
+                datasets:[{
+                    label:'Current Values',
+                    data:[0,0,0,0,0,0],
+                    backgroundColor:[
+                        '#38bdf8',
+                        '#f43f5e',
+                        '#facc15',
+                        '#22c55e',
+                        '#8b5cf6',
+                        '#06b6d4'
+                    ],
+                    borderRadius:8
+                }]
+            },
+            options:{
+                maintainAspectRatio:false,
+                plugins:{
+                    legend:{
+                        labels:{ color:'#cbd5e1' }
+                    }
+                },
+                scales:{
+                    x:{
+                        ticks:{ color:'#94a3b8' },
+                        grid:{ display:false }
+                    },
+                    y:{
+                        ticks:{ color:'#94a3b8' },
+                        grid:{ color:'rgba(148,163,184,0.08)' }
+                    }
+                }
+            }
+        });
+
+        function setBadge(elementId, text, className){
+            const el = document.getElementById(elementId);
+            el.textContent = text;
+            el.className = 'badge ' + className;
+        }
+
+        function updateDashboard(data){
+            document.getElementById("temperatureValue").innerHTML = `${data.temperature}<span class="metric-unit">°C</span>`;
+            document.getElementById("vibrationValue").innerHTML = `${data.vibration}<span class="metric-unit">mm/s</span>`;
+            document.getElementById("rpmValue").innerHTML = `${data.rpm}<span class="metric-unit">rpm</span>`;
+            document.getElementById("fuelFlowValue").innerHTML = `${data.fuel_flow}<span class="metric-unit">kg/h</span>`;
+            document.getElementById("pressureValue").innerHTML = `${data.pressure}<span class="metric-unit">psi</span>`;
+            document.getElementById("engineLoadValue").innerHTML = `${data.engine_load.toFixed(1)}<span class="metric-unit">%</span>`;
+
+            const now = new Date();
+            document.getElementById("lastUpdated").textContent = "Updated: " + now.toLocaleTimeString();
+
+            // Alerts
+            if(data.vibration_alert){
+                setBadge("vibrationAlertBadge", "ALERT", "danger");
+            } else {
+                setBadge("vibrationAlertBadge", "NORMAL", "ok");
+            }
+
+            if(data.failure_warning){
+                setBadge("failureWarningBadge", "WARNING", "danger");
+                setBadge("overallHealthBadge", "CRITICAL", "danger");
+            } else if(data.engine_load > 80 || data.temperature > 800){
+                setBadge("failureWarningBadge", "SAFE", "ok");
+                setBadge("overallHealthBadge", "MONITOR", "warn");
+            } else {
+                setBadge("failureWarningBadge", "SAFE", "ok");
+                setBadge("overallHealthBadge", "HEALTHY", "ok");
+            }
+
+            // Progress bars
+            const tempPercent = Math.min((data.temperature / 1000) * 100, 100);
+            const vibPercent = Math.min((data.vibration / 8) * 100, 100);
+            const loadPercent = Math.min(data.engine_load, 100);
+            const fuelPercent = Math.min((data.fuel_flow / 200) * 100, 100);
+
+            document.getElementById("tempProgressBar").style.width = tempPercent + "%";
+            document.getElementById("vibProgressBar").style.width = vibPercent + "%";
+            document.getElementById("loadProgressBar").style.width = loadPercent + "%";
+            document.getElementById("fuelProgressBar").style.width = fuelPercent + "%";
+
+            document.getElementById("tempProgressText").textContent = tempPercent.toFixed(0) + "%";
+            document.getElementById("vibProgressText").textContent = vibPercent.toFixed(0) + "%";
+            document.getElementById("loadProgressText").textContent = loadPercent.toFixed(0) + "%";
+            document.getElementById("fuelProgressText").textContent = fuelPercent.toFixed(0) + "%";
+
+            // Update history
+            sensorHistoryLabels.push((sensorHistoryLabels.length + 1).toString());
+            if(sensorHistoryLabels.length > 10) sensorHistoryLabels.shift();
+
+            temperatureHistory.push(data.temperature);
+            vibrationHistory.push(data.vibration);
+            rpmHistory.push(data.rpm);
+
+            if(temperatureHistory.length > 10) temperatureHistory.shift();
+            if(vibrationHistory.length > 10) vibrationHistory.shift();
+            if(rpmHistory.length > 10) rpmHistory.shift();
+
+            trendChart.data.labels = sensorHistoryLabels;
+            trendChart.data.datasets[0].data = temperatureHistory;
+            trendChart.data.datasets[1].data = vibrationHistory;
+            trendChart.data.datasets[2].data = rpmHistory;
+            trendChart.update();
+
+            engineLoadChart.data.datasets[0].data = [loadPercent, 100 - loadPercent];
+            engineLoadChart.update();
+
+            const tempSafePercent = Math.min((data.temperature / 850) * 100, 100);
+            temperatureChart.data.datasets[0].data = [tempSafePercent, 100 - tempSafePercent];
+            temperatureChart.update();
+
+            radarChart.data.datasets[0].data = [
+                Math.min((data.temperature / 1000) * 100, 100),
+                Math.min((data.vibration / 8) * 100, 100),
+                Math.min((data.rpm / 15000) * 100, 100),
+                Math.min((data.fuel_flow / 200) * 100, 100),
+                Math.min((data.pressure / 300) * 100, 100)
+            ];
+            radarChart.update();
+
+            barChart.data.datasets[0].data = [
+                data.temperature,
+                data.vibration,
+                data.rpm,
+                data.fuel_flow,
+                data.pressure,
+                data.engine_load.toFixed(1)
+            ];
+            barChart.update();
+        }
+
+        // Demo first load
+        updateDashboard({
+            temperature: 810,
+            vibration: 4.1,
+            rpm: 12600,
+            fuel_flow: 142,
+            pressure: 210,
+            vibration_alert: true,
+            engine_load: (12600 / 15000) * 100,
+            failure_warning: false
+        });
+
+        // Optional: real backend polling
+        // Make sure your Flask route returns JSON like:
+        // {
+        //   "temperature": 810,
+        //   "vibration": 4.1,
+        //   "rpm": 12600,
+        //   "fuel_flow": 142,
+        //   "pressure": 210,
+        //   "vibration_alert": true,
+        //   "engine_load": 84,
+        //   "failure_warning": false
+        // }
+
+        async function fetchSensorData(){
+            try{
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                updateDashboard(data);
+            }catch(error){
+                console.log("Could not fetch live data:", error);
+            }
+        }
+
+        // Uncomment this when your backend is ready
+        // setInterval(fetchSensorData, 3000);
+    </script>
 </body>
 </html>
