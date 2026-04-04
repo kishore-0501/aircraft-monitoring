@@ -12,7 +12,7 @@ def get_conn():
 
 # Create table if not exists
 conn = get_conn()
-conn.execute('''
+conn.execute("""
 CREATE TABLE IF NOT EXISTS engine_data (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     temperature REAL,
@@ -24,35 +24,90 @@ CREATE TABLE IF NOT EXISTS engine_data (
     engine_load REAL,
     failure_warning BOOLEAN
 )
-''')
+""")
 conn.commit()
 conn.close()
 
-@app.route('/')
+@app.route("/")
 def dashboard():
-    return render_template('dashboard.html')
+    return render_template("dashboard.html")
 
-@app.route('/upload', methods=['POST'])
+@app.route("/upload", methods=["POST"])
 def upload_data():
-    data = request.json
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"status": "error", "message": "No JSON received"}), 400
+
     conn = get_conn()
-    conn.execute('''
-        INSERT INTO engine_data 
+    conn.execute("""
+        INSERT INTO engine_data
         (temperature, vibration, rpm, fuel_flow, pressure, vibration_alert, engine_load, failure_warning)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (data["temperature"], data["vibration"], data["rpm"], data["fuel_flow"], data["pressure"],
-          data["vibration_alert"], data["engine_load"], data["failure_warning"]))
+    """, (
+        data.get("temperature"),
+        data.get("vibration"),
+        data.get("rpm"),
+        data.get("fuel_flow"),
+        data.get("pressure"),
+        int(bool(data.get("vibration_alert"))),
+        data.get("engine_load"),
+        int(bool(data.get("failure_warning")))
+    ))
     conn.commit()
     conn.close()
-    return {"status": "success"}
 
-@app.route('/api/data')
+    return jsonify({"status": "success"}), 200
+
+@app.route("/api/data")
 def api_data():
     conn = get_conn()
-    rows = conn.execute('SELECT * FROM engine_data ORDER BY id DESC LIMIT 100').fetchall()
+    row = conn.execute("""
+        SELECT temperature, vibration, rpm, fuel_flow, pressure,
+               vibration_alert, engine_load, failure_warning
+        FROM engine_data
+        ORDER BY id DESC
+        LIMIT 1
+    """).fetchone()
     conn.close()
-    data = [dict(row) for row in reversed(rows)]
+
+    if row is None:
+        return jsonify({
+            "temperature": 0,
+            "vibration": 0,
+            "rpm": 0,
+            "fuel_flow": 0,
+            "pressure": 0,
+            "vibration_alert": False,
+            "engine_load": 0,
+            "failure_warning": False
+        })
+
+    data = dict(row)
+    data["vibration_alert"] = bool(data["vibration_alert"])
+    data["failure_warning"] = bool(data["failure_warning"])
+
     return jsonify(data)
 
-#if __name__ == "__main__":
- #   app.run(host='0.0.0.0', port=8080, debug=True)
+@app.route("/api/history")
+def api_history():
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT id, temperature, vibration, rpm, fuel_flow, pressure,
+               vibration_alert, engine_load, failure_warning
+        FROM engine_data
+        ORDER BY id DESC
+        LIMIT 20
+    """).fetchall()
+    conn.close()
+
+    data = [dict(row) for row in reversed(rows)]
+
+    for item in data:
+        item["vibration_alert"] = bool(item["vibration_alert"])
+        item["failure_warning"] = bool(item["failure_warning"])
+
+    return jsonify(data)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080, debug=True)
