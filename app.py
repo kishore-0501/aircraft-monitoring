@@ -28,9 +28,9 @@ def upload_data():
             "rpm": Decimal(str(data.get("rpm", 0))),
             "fuel_flow": Decimal(str(data.get("fuel_flow", 0))),
             "pressure": Decimal(str(data.get("pressure", 0))),
-            "vibration_alert": bool(data.get("vibration_alert", False)),
+            "vibration_alert": data.get("vibration_alert", False),
             "engine_load": Decimal(str(data.get("engine_load", 0))),
-            "failure_warning": bool(data.get("failure_warning", False))
+            "failure_warning": data.get("failure_warning", False)
         }
 
         enginedata.put_item(Item=item)
@@ -40,7 +40,7 @@ def upload_data():
         return jsonify({"status": "success", "message": "Saved to DynamoDB"}), 200
 
     except Exception as e:
-        print("DynamoDB write error:", str(e))
+        print("UPLOAD ERROR:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/data")
@@ -73,8 +73,8 @@ def api_data():
         })
 
     except Exception as e:
-        print("DynamoDB read error:", str(e))
+        print("READ ERROR:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    app.run(host="0.0.0.0", port=8080)
