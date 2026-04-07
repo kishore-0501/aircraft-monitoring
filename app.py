@@ -1,7 +1,5 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify
 import boto3
-from decimal import Decimal
-import time
 
 app = Flask(__name__)
 
@@ -12,44 +10,13 @@ enginedata = dynamodb.Table("engine")
 def dashboard():
     return render_template("dashboard.html")
 
-@app.route("/upload", methods=["POST"])
-def upload_data():
-    try:
-        data = request.get_json()
-
-        if not data:
-            return jsonify({"status": "error", "message": "No JSON received"}), 400
-
-        item = {
-            "id": "latest",
-            "timestamp": str(time.time()),
-            "temperature": Decimal(str(data.get("temperature", 0))),
-            "vibration": Decimal(str(data.get("vibration", 0))),
-            "rpm": Decimal(str(data.get("rpm", 0))),
-            "fuel_flow": Decimal(str(data.get("fuel_flow", 0))),
-            "pressure": Decimal(str(data.get("pressure", 0))),
-            "vibration_alert": data.get("vibration_alert", False),
-            "engine_load": Decimal(str(data.get("engine_load", 0))),
-            "failure_warning": data.get("failure_warning", False)
-        }
-
-        enginedata.put_item(Item=item)
-
-        print("Saved to DynamoDB:", item)
-
-        return jsonify({"status": "success", "message": "Saved to DynamoDB"}), 200
-
-    except Exception as e:
-        print("UPLOAD ERROR:", str(e))
-        return jsonify({"status": "error", "message": str(e)}), 500
-
 @app.route("/api/data")
 def api_data():
     try:
-        response = enginedata.get_item(Key={"id": "latest"})
-        item = response.get("Item")
+        response = enginedata.scan()
+        items = response.get("Items", [])
 
-        if not item:
+        if not items:
             return jsonify({
                 "temperature": 0,
                 "vibration": 0,
@@ -58,18 +25,26 @@ def api_data():
                 "pressure": 0,
                 "vibration_alert": False,
                 "engine_load": 0,
-                "failure_warning": False
+                "failure_warning": False,
+                "timestamp": 0
             })
 
+        latest_item = sorted(
+            items,
+            key=lambda x: float(x.get("timestamp", 0)),
+            reverse=True
+        )[0]
+
         return jsonify({
-            "temperature": float(item.get("temperature", 0)),
-            "vibration": float(item.get("vibration", 0)),
-            "rpm": float(item.get("rpm", 0)),
-            "fuel_flow": float(item.get("fuel_flow", 0)),
-            "pressure": float(item.get("pressure", 0)),
-            "vibration_alert": bool(item.get("vibration_alert", False)),
-            "engine_load": float(item.get("engine_load", 0)),
-            "failure_warning": bool(item.get("failure_warning", False))
+            "temperature": float(latest_item.get("temperature", 0)),
+            "vibration": float(latest_item.get("vibration", 0)),
+            "rpm": float(latest_item.get("rpm", 0)),
+            "fuel_flow": float(latest_item.get("fuel_flow", 0)),
+            "pressure": float(latest_item.get("pressure", 0)),
+            "vibration_alert": bool(latest_item.get("vibration_alert", False)),
+            "engine_load": float(latest_item.get("engine_load", 0)),
+            "failure_warning": bool(latest_item.get("failure_warning", False)),
+            "timestamp": float(latest_item.get("timestamp", 0))
         })
 
     except Exception as e:
