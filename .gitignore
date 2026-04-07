@@ -10,3 +10,8 @@ venv/
 # Python cache
 __pycache__/
 *.pyc
+
+certs/
+*.pem
+*.key
+*.crt

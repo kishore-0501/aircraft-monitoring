@@ -1,5 +1,6 @@
 import json
 import time
+import os
 from awscrt import mqtt
 from awsiot import mqtt_connection_builder
 from sensors.sensor_sim import generate_sensor_data
@@ -7,9 +8,11 @@ from sensors.sensor_sim import generate_sensor_data
 ENDPOINT = "a1fwdgnq21uvs8-ats.iot.us-east-1.amazonaws.com"
 CLIENT_ID = "engine-simulator-client"
 
-PATH_TO_CERT = "/home/ec2-user/environment/aircraft/certs/certificate.pem.crt"
-PATH_TO_KEY = "/home/ec2-user/environment/aircraft/certs/private.pem.key"
-PATH_TO_ROOT = "/home/ec2-user/environment/aircraft/certs/AmazonRootCA1.pem"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+PATH_TO_CERT = os.path.join(BASE_DIR, "certs", "certificate.pem.crt")
+PATH_TO_KEY = os.path.join(BASE_DIR, "certs", "private.pem.key")
+PATH_TO_ROOT = os.path.join(BASE_DIR, "certs", "AmazonRootCA1.pem")
 
 TOPIC = "engine/data"
 
